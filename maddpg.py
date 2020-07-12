@@ -27,34 +27,41 @@ class MADDPG:
         self.iter = 0
 
     def get_actors(self):
+        '''retreive all agent's actors from MAGGPs Objet'''
         actors = [ddpg_agent.actor for ddpg_agent in self.maddpg_agent]
         return actors
 
     def get_target_actors(self):
+        '''retreive all agent's target actors from MAGGPs Objet'''
         target_actors = [ddpg_agent.target_actor for ddpg_agent in self.maddpg_agent]
         return target_actors
 
     def get_critics(self):
+        '''retreive all agent's critics from MAGGPs Objet'''
         actors = [ddpg_agent.critic for ddpg_agent in self.maddpg_agent]
         return actors
 
     def act(self, obs_all_agents, noise=0.0):
+        '''retreive actions from the agents'''
         actions = [agent.act(obs, noise) for agent, obs in zip(self.maddpg_agent, obs_all_agents)]
         return actions
 
-    def target_act(self, obs_all_agents, noise=0.0):
-        target_actions = [ddpg_agent.target_act(obs, noise) for ddpg_agent, obs in zip(self.maddpg_agent, obs_all_agents)]
-        return target_actions
+    # def target_act(self, obs_all_agents, noise=0.0):
+    #     '''retreive target nteworks actions'''
+    #     target_actions = [ddpg_agent.target_act(obs, noise) for ddpg_agent, obs in zip(self.maddpg_agent, obs_all_agents)]
+    #     return target_actions
     
 
     def update(self, samples, agent_number):
+        '''update the actor and the critic for the agents'''
         obs, obs_full, action, reward, next_obs, next_obs_full, done = map(transpose_to_tensor, samples)
         obs_full = torch.stack(obs_full)
         next_obs_full = torch.stack(next_obs_full)
         
         agent = self.maddpg_agent[agent_number]
         agent.critic_optimizer.zero_grad()
-        target_actions = self.target_act(next_obs)
+        # target_actions = self.target_act(next_obs)
+        target_actions = self.act(next_obs)
         target_actions = torch.cat(target_actions, dim=1)
 
         with torch.no_grad():
@@ -79,6 +86,7 @@ class MADDPG:
         agent.actor_optimizer.step()
 
     def soft_update_targets(self):
+        '''perform soft update to targets'''
         self.iter += 1
         for ddpg_agent in self.maddpg_agent:
             soft_update(ddpg_agent.target_actor, ddpg_agent.actor, self.tau)
